@@ -17,6 +17,17 @@ function notifyUpdate() {
   }
 }
 
+// Helper para limpar campos undefined antes de enviar ao Supabase
+function cleanPayload<T extends Record<string, any>>(obj: T): Record<string, any> {
+  const result: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
 // Inicializa dados no localStorage se vazios
 function initLocalStorage() {
   if (typeof window === "undefined") return;
@@ -63,20 +74,37 @@ export async function saveProject(project: Omit<Project, "id" | "created_at" | "
 
   if (isSupabaseConfigured() && supabase) {
     if (project.id) {
-      const { data } = await supabase
+      const payload = cleanPayload({ ...project, updated_at: now });
+      const { data, error } = await supabase
         .from("projects")
-        .update({ ...project, updated_at: now })
+        .update(payload)
         .eq("id", project.id)
         .select()
         .single();
-      if (data) return data;
+      if (error) {
+        console.error("Erro ao atualizar projeto no Supabase:", error);
+        throw new Error(error.message);
+      }
+      if (data) {
+        notifyUpdate();
+        return data;
+      }
     } else {
-      const { data } = await supabase
+      const payload = cleanPayload({ ...project, created_at: now, updated_at: now });
+      delete payload.id;
+      const { data, error } = await supabase
         .from("projects")
-        .insert([{ ...project, created_at: now, updated_at: now }])
+        .insert([payload])
         .select()
         .single();
-      if (data) return data;
+      if (error) {
+        console.error("Erro ao inserir projeto no Supabase:", error);
+        throw new Error(error.message);
+      }
+      if (data) {
+        notifyUpdate();
+        return data;
+      }
     }
   }
 
@@ -106,9 +134,13 @@ export async function saveProject(project: Omit<Project, "id" | "created_at" | "
 
 export async function deleteProject(id: string): Promise<boolean> {
   if (isSupabaseConfigured() && supabase) {
-    await supabase.from("projects").delete().eq("id", id);
-    // Exclui tarefas vinculadas no banco
     await supabase.from("tasks").delete().eq("project_id", id);
+    const { error } = await supabase.from("projects").delete().eq("id", id);
+    if (error) {
+      console.error("Erro ao excluir projeto no Supabase:", error);
+      throw new Error(error.message);
+    }
+    notifyUpdate();
     return true;
   }
 
@@ -184,20 +216,37 @@ export async function saveTask(task: Omit<Task, "id" | "created_at" | "updated_a
 
   if (isSupabaseConfigured() && supabase) {
     if (task.id) {
-      const { data } = await supabase
+      const payload = cleanPayload({ ...enriched, updated_at: now });
+      const { data, error } = await supabase
         .from("tasks")
-        .update({ ...enriched, updated_at: now })
+        .update(payload)
         .eq("id", task.id)
         .select()
         .single();
-      if (data) return data;
+      if (error) {
+        console.error("Erro ao atualizar tarefa no Supabase:", error);
+        throw new Error(error.message);
+      }
+      if (data) {
+        notifyUpdate();
+        return data;
+      }
     } else {
-      const { data } = await supabase
+      const payload = cleanPayload({ ...enriched, created_at: now, updated_at: now });
+      delete payload.id;
+      const { data, error } = await supabase
         .from("tasks")
-        .insert([{ ...enriched, created_at: now, updated_at: now }])
+        .insert([payload])
         .select()
         .single();
-      if (data) return data;
+      if (error) {
+        console.error("Erro ao inserir tarefa no Supabase:", error);
+        throw new Error(error.message);
+      }
+      if (data) {
+        notifyUpdate();
+        return data;
+      }
     }
   }
 
@@ -227,7 +276,12 @@ export async function saveTask(task: Omit<Task, "id" | "created_at" | "updated_a
 
 export async function deleteTask(id: string): Promise<boolean> {
   if (isSupabaseConfigured() && supabase) {
-    await supabase.from("tasks").delete().eq("id", id);
+    const { error } = await supabase.from("tasks").delete().eq("id", id);
+    if (error) {
+      console.error("Erro ao excluir tarefa no Supabase:", error);
+      throw new Error(error.message);
+    }
+    notifyUpdate();
     return true;
   }
 
@@ -262,11 +316,28 @@ export async function saveAssignee(assignee: Omit<Assignee, "id"> & { id?: strin
 
   if (isSupabaseConfigured() && supabase) {
     if (assignee.id) {
-      const { data } = await supabase.from("assignees").update({ ...assignee, avatar_color: color }).eq("id", assignee.id).select().single();
-      if (data) return data;
+      const payload = cleanPayload({ ...assignee, avatar_color: color });
+      const { data, error } = await supabase.from("assignees").update(payload).eq("id", assignee.id).select().single();
+      if (error) {
+        console.error("Erro ao atualizar responsável no Supabase:", error);
+        throw new Error(error.message);
+      }
+      if (data) {
+        notifyUpdate();
+        return data;
+      }
     } else {
-      const { data } = await supabase.from("assignees").insert([{ ...assignee, avatar_color: color }]).select().single();
-      if (data) return data;
+      const payload = cleanPayload({ ...assignee, avatar_color: color });
+      delete payload.id;
+      const { data, error } = await supabase.from("assignees").insert([payload]).select().single();
+      if (error) {
+        console.error("Erro ao inserir responsável no Supabase:", error);
+        throw new Error(error.message);
+      }
+      if (data) {
+        notifyUpdate();
+        return data;
+      }
     }
   }
 
@@ -296,7 +367,12 @@ export async function saveAssignee(assignee: Omit<Assignee, "id"> & { id?: strin
 
 export async function deleteAssignee(id: string): Promise<boolean> {
   if (isSupabaseConfigured() && supabase) {
-    await supabase.from("assignees").delete().eq("id", id);
+    const { error } = await supabase.from("assignees").delete().eq("id", id);
+    if (error) {
+      console.error("Erro ao excluir responsável no Supabase:", error);
+      throw new Error(error.message);
+    }
+    notifyUpdate();
     return true;
   }
 

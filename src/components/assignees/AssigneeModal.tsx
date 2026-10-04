@@ -82,9 +82,10 @@ export function AssigneeModal({ isOpen, onClose, assigneeToEdit, onSaved }: Assi
       success(assigneeToEdit ? "Responsável atualizado com sucesso!" : "Novo responsável adicionado com sucesso!");
       if (onSaved) onSaved(saved);
       onClose();
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
-      error("Erro ao salvar responsável.");
+      const msg = err instanceof Error ? err.message : "Erro ao salvar responsável.";
+      error(msg);
     } finally {
       setSaving(false);
     }

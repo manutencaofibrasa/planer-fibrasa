@@ -87,9 +87,10 @@ export function ProjectModal({ isOpen, onClose, projectToEdit, onSaved }: Projec
       success(projectToEdit ? "Projeto atualizado com sucesso!" : "Novo projeto cadastrado com sucesso!");
       if (onSaved) onSaved(saved);
       onClose();
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
-      error("Erro ao salvar projeto.");
+      const msg = err instanceof Error ? err.message : "Erro ao salvar projeto.";
+      error(msg);
     } finally {
       setSaving(false);
     }

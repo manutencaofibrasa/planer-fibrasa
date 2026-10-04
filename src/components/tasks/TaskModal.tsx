@@ -127,9 +127,10 @@ export function TaskModal({ isOpen, onClose, taskToEdit, defaultProjectId, onSav
       success(taskToEdit ? "Atividade atualizada com sucesso!" : "Nova atividade cadastrada com sucesso!");
       if (onSaved) onSaved(saved);
       onClose();
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
-      error("Falha ao salvar a atividade.");
+      const msg = err instanceof Error ? err.message : "Falha ao salvar a atividade.";
+      error(msg);
     } finally {
       setSaving(false);
     }
