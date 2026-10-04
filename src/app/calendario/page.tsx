@@ -11,10 +11,18 @@ import {
   CheckCircle2,
   ShieldAlert,
   Plus,
+  MessageSquare,
 } from "lucide-react";
 import { Task } from "@/types";
 import { getTasks } from "@/lib/repository";
-import { formatDateBR, isOverdue, PRIORITY_CONFIG, TASK_STATUS_CONFIG } from "@/lib/utils";
+import {
+  formatDateBR,
+  isOverdue,
+  extractCleanNotes,
+  extractPromisedDate,
+  PRIORITY_CONFIG,
+  TASK_STATUS_CONFIG,
+} from "@/lib/utils";
 import { WhatsAppButton } from "@/components/shared/WhatsAppButton";
 import { TaskModal } from "@/components/tasks/TaskModal";
 
@@ -221,6 +229,8 @@ export default function CalendarioPage() {
                 const priority = PRIORITY_CONFIG[task.priority];
                 const status = TASK_STATUS_CONFIG[task.status];
                 const overdue = isOverdue(task.due_date, task.status);
+                const cleanNotes = extractCleanNotes(task.notes);
+                const promisedDate = task.promised_date || extractPromisedDate(task.notes);
 
                 return (
                   <div
@@ -243,12 +253,28 @@ export default function CalendarioPage() {
                         <Clock className="w-3.5 h-3.5 text-slate-400" />
                         <span>Resp: <strong className="text-slate-800">{task.assignee_name}</strong></span>
                       </div>
+                      {promisedDate && (
+                        <div className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 inline-block">
+                          🤝 Nova Previsão: {formatDateBR(promisedDate)}
+                        </div>
+                      )}
                     </div>
 
+                    {/* Apontamento Técnico */}
+                    {cleanNotes && (
+                      <div className="p-2 bg-blue-50/70 border border-blue-200 rounded-lg text-[11px] text-blue-900 flex items-start gap-1.5">
+                        <MessageSquare className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
+                        <div>
+                          <strong className="text-blue-800">Apontamento: </strong>
+                          <span className="text-slate-700">{cleanNotes}</span>
+                        </div>
+                      </div>
+                    )}
+
                     {task.impediment && (
-                      <div className="p-2 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-800 flex items-start gap-1.5">
-                        <ShieldAlert className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-                        <span>{task.impediment}</span>
+                      <div className="p-2 bg-rose-50 border border-rose-200 rounded-lg text-[11px] text-rose-800 flex items-start gap-1.5">
+                        <ShieldAlert className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+                        <span><strong>Impedimento: </strong>{task.impediment}</span>
                       </div>
                     )}
 

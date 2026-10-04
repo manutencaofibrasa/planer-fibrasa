@@ -29,7 +29,15 @@ import {
 } from "lucide-react";
 import { Task, Assignee, TaskStatus } from "@/types";
 import { getTasks, getAssignees, updateTaskExecution } from "@/lib/repository";
-import { formatDateBR, calculateDaysOverdue, isOverdue, isDueToday, PRIORITY_CONFIG } from "@/lib/utils";
+import {
+  formatDateBR,
+  calculateDaysOverdue,
+  isOverdue,
+  isDueToday,
+  PRIORITY_CONFIG,
+  extractCleanNotes,
+  extractPromisedDate,
+} from "@/lib/utils";
 import { useToast } from "@/context/ToastContext";
 
 function AtualizarContent() {
@@ -47,7 +55,7 @@ function AtualizarContent() {
   // Selected technician
   const [selectedAssigneeId, setSelectedAssigneeId] = useState<string>(urlAssigneeId || "");
 
-  // Card form local state: map of taskId -> { status, progress, notes, impediment, hasImpediment, isSaving, isSaved }
+  // Card form local state: map of taskId -> { status, progress, notes, promisedDate, impediment, hasImpediment, isSaving, isSaved }
   const [taskForms, setTaskForms] = useState<
     Record<
       string,
@@ -55,6 +63,7 @@ function AtualizarContent() {
         status: TaskStatus;
         progress: number;
         notes: string;
+        promisedDate: string;
         impediment: string;
         hasImpediment: boolean;
         isSaving: boolean;
@@ -82,7 +91,8 @@ function AtualizarContent() {
         forms[t.id] = {
           status: t.status,
           progress: t.progress_percent || 0,
-          notes: t.notes || "",
+          notes: extractCleanNotes(t.notes) || "",
+          promisedDate: t.promised_date || extractPromisedDate(t.notes) || "",
           impediment: t.impediment || "",
           hasImpediment: Boolean(t.impediment && t.impediment.trim().length > 0),
           isSaving: false,
@@ -216,11 +226,13 @@ function AtualizarContent() {
       }));
 
       const impedimentValue = form.hasImpediment && form.impediment.trim() ? form.impediment.trim() : null;
+      const promisedDateValue = form.promisedDate && form.promisedDate.trim() ? form.promisedDate.trim() : null;
 
       await updateTaskExecution(task.id, {
         status: form.status,
         progress_percent: Number(form.progress),
         notes: form.notes ? form.notes.trim() : null,
+        promised_date: promisedDateValue,
         impediment: impedimentValue,
       });
 
@@ -233,6 +245,7 @@ function AtualizarContent() {
                 status: form.status,
                 progress_percent: Number(form.progress),
                 notes: form.notes ? form.notes.trim() : null,
+                promised_date: promisedDateValue,
                 impediment: impedimentValue,
               }
             : t
@@ -581,27 +594,36 @@ function AtualizarContent() {
                       </div>
 
                       {/* Prazo Indicator */}
-                      {form.status === "concluida" ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                          <CheckCircle2 className="w-3 h-3" />
-                          Finalizada
-                        </span>
-                      ) : overdue ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-extrabold bg-red-100 text-red-700 border border-red-200 animate-pulse">
-                          <AlertTriangle className="w-3 h-3" />
-                          Atrasada ({daysLate}d) • Prazo: {formatDateBR(task.due_date)}
-                        </span>
-                      ) : dueToday ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                          <Clock className="w-3 h-3" />
-                          Vence Hoje ({formatDateBR(task.due_date)})
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium text-slate-600 bg-slate-50 border border-slate-200">
-                          <Calendar className="w-3 h-3 text-slate-400" />
-                          Prazo: {formatDateBR(task.due_date)}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {form.status === "concluida" ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Finalizada
+                          </span>
+                        ) : overdue ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-extrabold bg-red-100 text-red-700 border border-red-200 animate-pulse">
+                            <AlertTriangle className="w-3 h-3" />
+                            Atrasada ({daysLate}d) • Prazo: {formatDateBR(task.due_date)}
+                          </span>
+                        ) : dueToday ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                            <Clock className="w-3 h-3" />
+                            Vence Hoje ({formatDateBR(task.due_date)})
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium text-slate-600 bg-slate-50 border border-slate-200">
+                            <Calendar className="w-3 h-3 text-slate-400" />
+                            Prazo: {formatDateBR(task.due_date)}
+                          </span>
+                        )}
+
+                        {(form.promisedDate || task.promised_date) && form.status !== "concluida" && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-900 border border-blue-300">
+                            <Calendar className="w-3 h-3 text-blue-600" />
+                            Nova Previsão: {formatDateBR(form.promisedDate || task.promised_date)}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Title & Equipment */}
@@ -737,7 +759,50 @@ function AtualizarContent() {
                         />
                       </div>
 
-                      {/* 4. Impediment Toggle & Input */}
+                      {/* 4. Nova Previsão de Entrega (Afirmação do Técnico) */}
+                      <div
+                        className={`p-3 rounded-xl border transition ${
+                          overdue && form.status !== "concluida"
+                            ? "bg-amber-50/80 border-amber-300"
+                            : "bg-slate-50 border-slate-200"
+                        }`}
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1.5">
+                          <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-amber-700" />
+                            <span>4. Nova Previsão de Entrega (Afirmação do Técnico):</span>
+                          </label>
+                          {task.due_date && (
+                            <span className="text-[11px] text-slate-500">
+                              Prazo original: <strong className="text-slate-700">{formatDateBR(task.due_date)}</strong>
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="date"
+                            value={form.promisedDate}
+                            onChange={(e) => handleFieldChange(task.id, "promisedDate", e.target.value)}
+                            className="w-full sm:w-auto p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
+                          />
+                          {form.promisedDate && (
+                            <button
+                              type="button"
+                              onClick={() => handleFieldChange(task.id, "promisedDate", "")}
+                              className="text-[10px] text-slate-400 hover:text-rose-600 underline font-medium"
+                            >
+                              Limpar previsão
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-1.5">
+                          {overdue
+                            ? "🚨 Atividade em atraso: selecione a nova data em que você garante a entrega do serviço."
+                            : "Caso precise repactuar o prazo com a coordenação, informe a nova data prevista."}
+                        </p>
+                      </div>
+
+                      {/* 5. Impedimento Toggle & Input */}
                       <div>
                         <button
                           type="button"

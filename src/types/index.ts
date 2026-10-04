@@ -48,6 +48,7 @@ export interface Task {
   progress_percent: number; // 0 to 100
   impediment?: string | null;
   notes?: string | null;
+  promised_date?: string | null; // Nova data afirmada pelo técnico
   created_at: string;
   updated_at: string;
   completed_at?: string | null;

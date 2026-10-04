@@ -5,7 +5,7 @@ import { X, CheckCircle, AlertCircle, Wrench, Calendar, User, FolderKanban, Shie
 import { Task, Priority, TaskStatus, Project, Assignee } from "@/types";
 import { getProjects, getAssignees, getSettings, saveTask } from "@/lib/repository";
 import { useToast } from "@/context/ToastContext";
-import { getTodayDateString } from "@/lib/utils";
+import { getTodayDateString, extractCleanNotes, extractPromisedDate } from "@/lib/utils";
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -32,6 +32,7 @@ export function TaskModal({ isOpen, onClose, taskToEdit, defaultProjectId, onSav
   const [equipment, setEquipment] = useState("");
   const [startDate, setStartDate] = useState(getTodayDateString());
   const [dueDate, setDueDate] = useState(getTodayDateString());
+  const [promisedDate, setPromisedDate] = useState("");
   const [priority, setPriority] = useState<Priority>("media");
   const [status, setStatus] = useState<TaskStatus>("pendente");
   const [progressPercent, setProgressPercent] = useState<number>(0);
@@ -59,11 +60,12 @@ export function TaskModal({ isOpen, onClose, taskToEdit, defaultProjectId, onSav
         setEquipment(taskToEdit.equipment);
         setStartDate(taskToEdit.start_date);
         setDueDate(taskToEdit.due_date);
+        setPromisedDate(taskToEdit.promised_date || extractPromisedDate(taskToEdit.notes) || "");
         setPriority(taskToEdit.priority);
         setStatus(taskToEdit.status);
         setProgressPercent(taskToEdit.progress_percent || 0);
         setImpediment(taskToEdit.impediment || "");
-        setNotes(taskToEdit.notes || "");
+        setNotes(extractCleanNotes(taskToEdit.notes) || "");
       } else {
         // Defaults for new task
         setTitle("");
@@ -74,6 +76,7 @@ export function TaskModal({ isOpen, onClose, taskToEdit, defaultProjectId, onSav
         setEquipment(settings.equipments?.[0] || "Chiller Sabroe 01");
         setStartDate(getTodayDateString());
         setDueDate(getTodayDateString());
+        setPromisedDate("");
         setPriority("media");
         setStatus("pendente");
         setProgressPercent(0);
@@ -122,6 +125,7 @@ export function TaskModal({ isOpen, onClose, taskToEdit, defaultProjectId, onSav
         progress_percent: status === "concluida" ? 100 : Number(progressPercent),
         impediment: impediment.trim() ? impediment.trim() : null,
         notes: notes.trim() ? notes.trim() : null,
+        promised_date: promisedDate.trim() ? promisedDate.trim() : null,
       });
 
       success(taskToEdit ? "Atividade atualizada com sucesso!" : "Nova atividade cadastrada com sucesso!");
@@ -269,8 +273,8 @@ export function TaskModal({ isOpen, onClose, taskToEdit, defaultProjectId, onSav
               </div>
             </div>
 
-            {/* Datas de Início e Prazo */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Datas de Início, Prazo Original e Nova Previsão do Técnico */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1 flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5 text-slate-500" />
@@ -288,7 +292,7 @@ export function TaskModal({ isOpen, onClose, taskToEdit, defaultProjectId, onSav
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1 flex items-center gap-1.5 text-red-600">
                   <Calendar className="w-3.5 h-3.5 text-red-600" />
-                  Prazo de Conclusão *
+                  Prazo Original *
                 </label>
                 <input
                   type="date"
@@ -296,6 +300,19 @@ export function TaskModal({ isOpen, onClose, taskToEdit, defaultProjectId, onSav
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
                   className="w-full px-3 py-2 text-sm bg-white border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 text-slate-900 font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-amber-800 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                  Nova Previsão (Técnico)
+                </label>
+                <input
+                  type="date"
+                  value={promisedDate}
+                  onChange={(e) => setPromisedDate(e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-white border border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-slate-900 font-semibold"
                 />
               </div>
             </div>
@@ -380,16 +397,16 @@ export function TaskModal({ isOpen, onClose, taskToEdit, defaultProjectId, onSav
               </p>
             </div>
 
-            {/* Observações */}
+            {/* Observações / Apontamento Técnico */}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Observações Adicionais
+                Observações / Último Apontamento Técnico
               </label>
               <textarea
                 rows={2}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Anotações de campo, histórico de medições..."
+                placeholder="Anotações de campo, histórico de medições, apontamento técnico de execução..."
                 className="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-900 resize-none"
               />
             </div>

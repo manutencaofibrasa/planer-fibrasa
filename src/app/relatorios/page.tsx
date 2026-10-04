@@ -17,7 +17,15 @@ import {
 } from "lucide-react";
 import { Task, Project, Assignee } from "@/types";
 import { getTasks, getProjects, getAssignees, getSettings } from "@/lib/repository";
-import { formatDateBR, isOverdue, calculateDaysOverdue, PRIORITY_CONFIG, TASK_STATUS_CONFIG } from "@/lib/utils";
+import {
+  formatDateBR,
+  isOverdue,
+  calculateDaysOverdue,
+  extractCleanNotes,
+  extractPromisedDate,
+  PRIORITY_CONFIG,
+  TASK_STATUS_CONFIG,
+} from "@/lib/utils";
 
 export default function RelatoriosPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -85,12 +93,13 @@ export default function RelatoriosPage() {
       "Setor",
       "Equipamento",
       "Data Início",
-      "Prazo",
+      "Prazo Original",
+      "Nova Previsão (Técnico)",
       "Status",
       "Prioridade",
       "% Conclusão",
       "Impedimento",
-      "Observações",
+      "Último Apontamento",
     ];
 
     const rows = filteredTasks.map((t) => [
@@ -102,11 +111,12 @@ export default function RelatoriosPage() {
       `"${t.equipment}"`,
       t.start_date,
       t.due_date,
+      t.promised_date || extractPromisedDate(t.notes) || "",
       t.status,
       t.priority,
       t.progress_percent,
       `"${(t.impediment || "").replace(/"/g, '""')}"`,
-      `"${(t.notes || "").replace(/"/g, '""')}"`,
+      `"${(extractCleanNotes(t.notes) || "").replace(/"/g, '""')}"`,
     ]);
 
     const csvContent = "\uFEFF" + [headers.join(";"), ...rows.map((e) => e.join(";"))].join("\n");
@@ -303,18 +313,34 @@ export default function RelatoriosPage() {
                 const priority = PRIORITY_CONFIG[t.priority];
                 const status = TASK_STATUS_CONFIG[t.status];
                 const overdue = isOverdue(t.due_date, t.status);
+                const cleanNotes = extractCleanNotes(t.notes);
+                const promisedDate = t.promised_date || extractPromisedDate(t.notes);
 
                 return (
                   <tr key={t.id} className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 font-semibold text-slate-900">{t.title}</td>
+                    <td className="py-2.5 px-3 min-w-[200px]">
+                      <div className="font-semibold text-slate-900">{t.title}</div>
+                      {cleanNotes && (
+                        <div className="text-[10px] text-blue-800 bg-blue-50/70 px-1.5 py-0.5 rounded border border-blue-200 mt-1 max-w-sm truncate">
+                          💬 {cleanNotes}
+                        </div>
+                      )}
+                    </td>
                     <td className="py-2.5 px-3 text-slate-700">{t.project_name}</td>
                     <td className="py-2.5 px-3 text-slate-700 font-medium">{t.equipment}</td>
                     <td className="py-2.5 px-3 text-slate-600">{t.sector}</td>
                     <td className="py-2.5 px-3 text-slate-800 font-medium">{t.assignee_name}</td>
                     <td className="py-2.5 px-3 whitespace-nowrap">
-                      <span className={overdue ? "text-red-700 font-bold" : "text-slate-800"}>
-                        {formatDateBR(t.due_date)}
-                      </span>
+                      <div className="flex flex-col">
+                        <span className={overdue ? "text-red-700 font-bold" : "text-slate-800"}>
+                          {formatDateBR(t.due_date)}
+                        </span>
+                        {promisedDate && (
+                          <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1 rounded border border-amber-200 inline-block mt-0.5">
+                            Nova: {formatDateBR(promisedDate)}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-2.5 px-3 whitespace-nowrap">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${priority.badge}`}>

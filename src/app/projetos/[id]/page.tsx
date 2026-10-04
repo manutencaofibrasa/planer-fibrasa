@@ -17,10 +17,20 @@ import {
   Trash2,
   RefreshCw,
   FileSpreadsheet,
+  MessageSquare,
 } from "lucide-react";
 import { Project, Task } from "@/types";
 import { getProjectById, getTasks, saveTask, deleteTask, deleteProject } from "@/lib/repository";
-import { formatDateBR, isOverdue, PROJECT_STATUS_CONFIG, PRIORITY_CONFIG, TASK_STATUS_CONFIG } from "@/lib/utils";
+import {
+  formatDateBR,
+  isOverdue,
+  calculateDaysOverdue,
+  extractCleanNotes,
+  extractPromisedDate,
+  PROJECT_STATUS_CONFIG,
+  PRIORITY_CONFIG,
+  TASK_STATUS_CONFIG,
+} from "@/lib/utils";
 import { WhatsAppButton } from "@/components/shared/WhatsAppButton";
 import { TaskModal } from "@/components/tasks/TaskModal";
 import { ImportTasksModal } from "@/components/tasks/ImportTasksModal";
@@ -292,15 +302,31 @@ export default function ProjectDetailsPage() {
                   const priority = PRIORITY_CONFIG[task.priority];
                   const status = TASK_STATUS_CONFIG[task.status];
                   const overdue = isOverdue(task.due_date, task.status);
+                  const cleanNotes = extractCleanNotes(task.notes);
+                  const promisedDate = task.promised_date || extractPromisedDate(task.notes);
+                  const daysLate = calculateDaysOverdue(task.due_date);
 
                   return (
                     <tr key={task.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-slate-900">{task.title}</div>
+                      <td className="py-3 px-4 min-w-[240px]">
+                        <div className="font-semibold text-slate-900 leading-snug">{task.title}</div>
+
+                        {/* Apontamento do Técnico visível no projeto */}
+                        {cleanNotes && (
+                          <div className="mt-1.5 flex items-start gap-1.5 p-2 rounded-lg bg-blue-50/70 border border-blue-200/80 text-blue-900 text-xs">
+                            <MessageSquare className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
+                            <div className="leading-snug">
+                              <span className="font-bold text-blue-800 mr-1">Último Apontamento:</span>
+                              <span className="text-slate-700">{cleanNotes}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Impedimento */}
                         {task.impediment && (
-                          <div className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                            <ShieldAlert className="w-3 h-3 text-amber-600 shrink-0" />
-                            <span className="truncate max-w-xs">{task.impediment}</span>
+                          <div className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-semibold text-rose-800 bg-rose-50 px-2.5 py-1 rounded-md border border-rose-200">
+                            <ShieldAlert className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                            <span>Impedimento: {task.impediment}</span>
                           </div>
                         )}
                       </td>
@@ -315,10 +341,28 @@ export default function ProjectDetailsPage() {
                       </td>
 
                       <td className="py-3 px-4 whitespace-nowrap">
-                        <div className="font-medium text-slate-800">{formatDateBR(task.due_date)}</div>
-                        {overdue && (
-                          <span className="text-[11px] font-bold text-red-600">Atrasada</span>
-                        )}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1.5 text-xs text-slate-700">
+                            <span className="text-[11px] text-slate-400">Prazo:</span>
+                            <span className={`font-semibold ${promisedDate && overdue ? "line-through text-slate-400" : "text-slate-800"}`}>
+                              {formatDateBR(task.due_date)}
+                            </span>
+                          </div>
+
+                          {promisedDate && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-300">
+                              <Calendar className="w-3 h-3 text-amber-600 shrink-0" />
+                              Nova Previsão: {formatDateBR(promisedDate)}
+                            </span>
+                          )}
+
+                          {overdue && task.status !== "concluida" && (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-red-600">
+                              <AlertTriangle className="w-3 h-3 text-red-500 shrink-0" />
+                              Atrasada ({daysLate}d)
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       <td className="py-3 px-4 whitespace-nowrap">
