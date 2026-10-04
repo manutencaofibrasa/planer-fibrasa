@@ -323,9 +323,11 @@ export const INITIAL_SETTINGS: SystemSettings = {
     "Extrusão",
     "Injeção",
     "Moagem",
+    "Produção",
     "Manutenção Mecânica",
     "Manutenção Elétrica",
     "PCM",
+    "Engenharia de Processos",
     "Coordenação de Manutenção"
   ],
   equipments: [

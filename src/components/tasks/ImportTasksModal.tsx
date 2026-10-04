@@ -18,7 +18,14 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { Project, Assignee, Priority, TaskStatus } from "@/types";
-import { getProjects, getAssignees, saveTasksBatch } from "@/lib/repository";
+import {
+  getProjects,
+  getAssignees,
+  saveTasksBatch,
+  saveAssignee,
+  getSettings,
+  saveSettings,
+} from "@/lib/repository";
 import { useToast } from "@/context/ToastContext";
 import { formatDateBR } from "@/lib/utils";
 
@@ -104,36 +111,64 @@ export function ImportTasksModal({
       .replace(/[^a-z0-9]/g, "");
   };
 
-  // Helper para formatar datas da planilha
+  // Helper para formatar datas da planilha com precisão total (sem deslocamento de fuso de Brasília)
   const parseSpreadsheetDate = (val: unknown, fallback: string): string => {
-    if (!val) return fallback;
-    if (val instanceof Date && !isNaN(val.getTime())) {
-      return val.toISOString().split("T")[0];
-    }
-    if (typeof val === "number") {
-      // Data serial do Excel
-      const date = new Date((val - 25569) * 86400 * 1000);
-      if (!isNaN(date.getTime())) {
-        return date.toISOString().split("T")[0];
-      }
-    }
+    if (val === null || val === undefined || val === "") return fallback;
+
+    // Se já for string (ex: '2026-10-15', '15/10/2026', '15-10-2026')
     if (typeof val === "string") {
       const trimmed = val.trim();
-      const brMatch = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+      // Formato brasileiro DD/MM/YYYY ou DD-MM-YYYY
+      const brMatch = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
       if (brMatch) {
-        const day = brMatch[1].padStart(2, "0");
-        const month = brMatch[2].padStart(2, "0");
-        const year = brMatch[3];
-        return `${year}-${month}-${day}`;
+        const d = brMatch[1].padStart(2, "0");
+        const m = brMatch[2].padStart(2, "0");
+        const y = brMatch[3];
+        return `${y}-${m}-${d}`;
       }
-      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-        return trimmed;
+      // Formato ISO YYYY-MM-DD
+      const isoMatch = trimmed.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+      if (isoMatch) {
+        const y = isoMatch[1];
+        const m = isoMatch[2].padStart(2, "0");
+        const d = isoMatch[3].padStart(2, "0");
+        return `${y}-${m}-${d}`;
       }
-      const parsed = new Date(trimmed);
-      if (!isNaN(parsed.getTime())) {
-        return parsed.toISOString().split("T")[0];
+      // Caso seja número serial em forma de string (ex: "46310")
+      const num = Number(trimmed);
+      if (!isNaN(num) && num > 20000 && num < 60000) {
+        try {
+          const parsed = XLSX.SSF.parse_date_code(Math.round(num));
+          if (parsed && parsed.y && parsed.m && parsed.d) {
+            return `${parsed.y}-${String(parsed.m).padStart(2, "0")}-${String(parsed.d).padStart(2, "0")}`;
+          }
+        } catch {
+          // ignora
+        }
       }
     }
+
+    // Se for número serial de data do Excel (ex: 46310)
+    if (typeof val === "number" && !isNaN(val)) {
+      try {
+        const parsed = XLSX.SSF.parse_date_code(Math.round(val));
+        if (parsed && parsed.y && parsed.m && parsed.d) {
+          return `${parsed.y}-${String(parsed.m).padStart(2, "0")}-${String(parsed.d).padStart(2, "0")}`;
+        }
+      } catch {
+        // fallback
+      }
+    }
+
+    // Se for objeto Date
+    if (val instanceof Date && !isNaN(val.getTime())) {
+      // Usar estritamente métodos UTC para evitar que GMT-3 subtraia horas
+      const y = val.getUTCFullYear();
+      const m = String(val.getUTCMonth() + 1).padStart(2, "0");
+      const d = String(val.getUTCDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+
     return fallback;
   };
 
@@ -213,10 +248,10 @@ export function ImportTasksModal({
     reader.onload = (evt) => {
       try {
         const bstr = evt.target?.result;
-        const wb = XLSX.read(bstr, { type: "binary", cellDates: true });
+        const wb = XLSX.read(bstr, { type: "binary", cellDates: false });
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
-        const data: Array<Record<string, unknown>> = XLSX.utils.sheet_to_json(ws);
+        const data: Array<Record<string, unknown>> = XLSX.utils.sheet_to_json(ws, { raw: false });
 
         if (!data || data.length === 0) {
           error("A planilha selecionada está vazia.");
@@ -281,18 +316,25 @@ export function ImportTasksModal({
             priority = "baixa";
           }
 
-          // Casar responsável
+          // Casar responsável exato ou parcial
           let matchedAssignee = assignees.find(
-            (a) => rawAssignee && a.name.toLowerCase().includes(rawAssignee.toLowerCase())
+            (a) => rawAssignee && a.name.trim().toLowerCase() === rawAssignee.trim().toLowerCase()
           );
           if (!matchedAssignee && rawAssignee) {
             matchedAssignee = assignees.find(
-              (a) => rawAssignee.toLowerCase().includes(a.name.toLowerCase())
+              (a) =>
+                a.name.toLowerCase().includes(rawAssignee.toLowerCase()) ||
+                rawAssignee.toLowerCase().includes(a.name.toLowerCase())
             );
           }
-          if (!matchedAssignee && assignees.length > 0) {
-            matchedAssignee = assignees[0];
-            warnings.push(`Responsável atribuído automaticamente a: ${matchedAssignee.name}`);
+
+          const hasMatched = Boolean(matchedAssignee);
+          const finalAssigneeName = matchedAssignee?.name || (rawAssignee ? rawAssignee.trim() : "Não atribuído");
+          const finalAssigneeId = matchedAssignee?.id || undefined;
+
+          // Se não encontrou no banco, NÃO substituir por outra pessoa: alertar que será cadastrado automaticamente
+          if (!hasMatched && rawAssignee && rawAssignee.trim().length > 0) {
+            warnings.push(`Novo responsável: "${rawAssignee.trim()}" (será cadastrado automaticamente no sistema)`);
           }
 
           return {
@@ -300,8 +342,8 @@ export function ImportTasksModal({
             title: rawTitle,
             equipment: rawEquip,
             sector: rawSector,
-            assigneeName: matchedAssignee?.name || rawAssignee || "Não atribuído",
-            assigneeId: matchedAssignee?.id,
+            assigneeName: finalAssigneeName,
+            assigneeId: finalAssigneeId,
             startDate: rawStartDate || todayStr,
             dueDate: rawDueDate || projectDueStr,
             priority,
@@ -346,24 +388,104 @@ export function ImportTasksModal({
     try {
       setIsSaving(true);
 
-      const tasksToInsert = validRows.map((row) => ({
-        title: row.title,
-        description: row.description || "",
-        project_id: selectedProjectId,
-        assignee_id: row.assigneeId || assignees[0]?.id || "ass-1",
-        sector: row.sector,
-        equipment: row.equipment,
-        start_date: row.startDate,
-        due_date: row.dueDate,
-        priority: row.priority,
-        status: "pendente" as TaskStatus,
-        progress_percent: 0,
-        impediment: row.impediment || null,
-      }));
+      // 1. Identificar responsáveis novos que precisam ser cadastrados no banco
+      const newAssigneesToCreate = new Map<string, { name: string; sector: string }>();
+
+      for (const row of validRows) {
+        if (!row.assigneeId && row.assigneeName && row.assigneeName !== "Não atribuído") {
+          const key = row.assigneeName.trim().toLowerCase();
+          if (!newAssigneesToCreate.has(key)) {
+            newAssigneesToCreate.set(key, {
+              name: row.assigneeName.trim(),
+              sector: row.sector || "Manutenção",
+            });
+          }
+        }
+      }
+
+      // 2. Criar cada novo responsável na base (Supabase / LocalStorage)
+      const newlyCreatedMap = new Map<string, string>(); // lowercaseName -> id
+
+      if (newAssigneesToCreate.size > 0) {
+        for (const [key, item] of newAssigneesToCreate.entries()) {
+          try {
+            const role =
+              item.sector.toLowerCase().includes("elétrica") || item.sector.toLowerCase().includes("eletrica")
+                ? "Técnico de Manutenção Elétrica"
+                : item.sector.toLowerCase().includes("mecânica") || item.sector.toLowerCase().includes("mecanica")
+                ? "Técnico de Manutenção Mecânica"
+                : item.sector.toLowerCase().includes("produção") || item.sector.toLowerCase().includes("producao")
+                ? "Operação / Manutenção Autônoma"
+                : item.sector.toLowerCase().includes("processo")
+                ? "Engenharia de Processos"
+                : "Executor Técnico";
+
+            const created = await saveAssignee({
+              name: item.name,
+              role,
+              sector: item.sector || "Manutenção Geral",
+              phone: "5527", // DDD padrão Fibrasa ES
+              active: true,
+            });
+            newlyCreatedMap.set(key, created.id);
+          } catch (createErr) {
+            console.error(`Erro ao auto-cadastrar responsável ${item.name}:`, createErr);
+          }
+        }
+      }
+
+      // 3. Atualizar setores nas configurações se houver setores novos
+      try {
+        const currentSettings = await getSettings();
+        const existingSectors = currentSettings.sectors || [];
+        const updatedSectors = [...existingSectors];
+        let sectorsChanged = false;
+
+        for (const row of validRows) {
+          if (row.sector && !updatedSectors.some((s) => s.toLowerCase() === row.sector.trim().toLowerCase())) {
+            updatedSectors.push(row.sector.trim());
+            sectorsChanged = true;
+          }
+        }
+
+        if (sectorsChanged) {
+          await saveSettings({
+            ...currentSettings,
+            sectors: updatedSectors,
+          });
+        }
+      } catch (secErr) {
+        console.warn("Aviso ao sincronizar novos setores:", secErr);
+      }
+
+      // 4. Montar a lista de tarefas com os IDs e nomes exatos preservados
+      const tasksToInsert = validRows.map((row) => {
+        const normKey = row.assigneeName.trim().toLowerCase();
+        const assignedId = row.assigneeId || newlyCreatedMap.get(normKey) || assignees[0]?.id || "ass-1";
+
+        return {
+          title: row.title,
+          description: row.description || "",
+          project_id: selectedProjectId,
+          assignee_id: assignedId,
+          assignee_name: row.assigneeName,
+          sector: row.sector,
+          equipment: row.equipment,
+          start_date: row.startDate,
+          due_date: row.dueDate,
+          priority: row.priority,
+          status: "pendente" as TaskStatus,
+          progress_percent: 0,
+          impediment: row.impediment || null,
+        };
+      });
 
       await saveTasksBatch(tasksToInsert);
 
-      success(`🎉 ${tasksToInsert.length} atividades importadas com sucesso para "${currentProject?.name}"!`);
+      const newPeopleCount = newAssigneesToCreate.size;
+      const newPeopleMsg = newPeopleCount > 0 ? ` (${newPeopleCount} novos responsáveis cadastrados automaticamente)` : "";
+
+      success(`🎉 ${tasksToInsert.length} atividades importadas com sucesso para "${currentProject?.name}"!${newPeopleMsg}`);
       if (onSuccess) onSuccess();
       onClose();
     } catch (err: unknown) {
@@ -532,7 +654,16 @@ export function ImportTasksModal({
                         </td>
                         <td className="py-2 px-3 whitespace-nowrap text-slate-700">{row.equipment}</td>
                         <td className="py-2 px-3 whitespace-nowrap text-slate-600">{row.sector}</td>
-                        <td className="py-2 px-3 whitespace-nowrap font-medium text-slate-800">{row.assigneeName}</td>
+                        <td className="py-2 px-3 whitespace-nowrap font-medium text-slate-800">
+                          <div className="flex items-center gap-1.5">
+                            <span>{row.assigneeName}</span>
+                            {!row.assigneeId && row.assigneeName && row.assigneeName !== "Não atribuído" && (
+                              <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-100 text-blue-700 border border-blue-200">
+                                Novo
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="py-2 px-3 whitespace-nowrap font-mono text-slate-700">{formatDateBR(row.dueDate)}</td>
                         <td className="py-2 px-3 whitespace-nowrap">
                           <span
