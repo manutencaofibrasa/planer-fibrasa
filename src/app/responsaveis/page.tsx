@@ -16,11 +16,14 @@ import {
   Edit2,
   Trash2,
   Search,
+  Copy,
+  Smartphone,
+  ExternalLink,
 } from "lucide-react";
 import { Assignee, Task } from "@/types";
 import { getAssignees, getTasks, deleteAssignee } from "@/lib/repository";
 import { isOverdue } from "@/lib/utils";
-import { formatPhoneNumber } from "@/lib/whatsapp";
+import { formatPhoneNumber, getAssigneeSummaryWhatsAppLink } from "@/lib/whatsapp";
 import { AssigneeModal } from "@/components/assignees/AssigneeModal";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { useToast } from "@/context/ToastContext";
@@ -33,8 +36,9 @@ interface AssigneeCardData extends Assignee {
 }
 
 export default function ResponsaveisPage() {
-  const { success, error } = useToast();
+  const { success, error, info } = useToast();
   const [assignees, setAssignees] = useState<AssigneeCardData[]>([]);
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
@@ -47,6 +51,7 @@ export default function ResponsaveisPage() {
     try {
       setLoading(true);
       const [asses, tasks] = await Promise.all([getAssignees(), getTasks()]);
+      setAllTasks(tasks);
 
       const enriched: AssigneeCardData[] = asses.map((a) => {
         const userTasks = tasks.filter((t) => t.assignee_id === a.id);
@@ -88,11 +93,18 @@ export default function ResponsaveisPage() {
     }
   };
 
-  const handleOpenDirectWhatsApp = (phone: string, name: string) => {
-    const formatted = formatPhoneNumber(phone);
-    const msg = encodeURIComponent(`Olá ${name}, tudo bem? Aqui é da Coordenação de Manutenção da Fibrasa.`);
-    const url = formatted ? `https://wa.me/${formatted}?text=${msg}` : `https://wa.me/?text=${msg}`;
+  const handleOpenDirectWhatsApp = (assignee: AssigneeCardData) => {
+    const userTasks = allTasks.filter((t) => t.assignee_id === assignee.id);
+    const url = getAssigneeSummaryWhatsAppLink(assignee.name, assignee.id, assignee.phone, userTasks);
     window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const handleCopyPortalLink = (assigneeId: string) => {
+    if (typeof window !== "undefined") {
+      const url = `${window.location.origin}/atualizar?r=${assigneeId}`;
+      navigator.clipboard.writeText(url);
+      info("📋 Link do portal do técnico copiado para a área de transferência!");
+    }
   };
 
   const filteredAssignees = assignees.filter((a) => {
@@ -196,15 +208,26 @@ export default function ResponsaveisPage() {
                         <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                         <span className="font-mono text-slate-700">{a.phone || "Sem telefone"}</span>
                       </div>
-                      {a.phone && (
+                      <div className="flex items-center gap-2.5">
                         <button
-                          onClick={() => handleOpenDirectWhatsApp(a.phone, a.name)}
-                          className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-1"
+                          onClick={() => handleCopyPortalLink(a.id)}
+                          title="Copiar link do portal do técnico"
+                          className="text-[11px] font-bold text-slate-600 hover:text-emerald-700 hover:underline flex items-center gap-1"
                         >
-                          <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>WhatsApp</span>
+                          <Copy className="w-3 h-3 text-slate-500" />
+                          <span>Link</span>
                         </button>
-                      )}
+                        {a.phone && (
+                          <button
+                            onClick={() => handleOpenDirectWhatsApp(a)}
+                            title="Cobrar pendências via WhatsApp com link do portal"
+                            className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-1"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Cobrar Zap</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
                     {a.email && (
                       <div className="flex items-center gap-2 truncate">
@@ -237,12 +260,24 @@ export default function ResponsaveisPage() {
 
                 {/* Footer Actions */}
                 <div className="px-5 py-3 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between">
-                  <Link
-                    href={`/atividades?q=${encodeURIComponent(a.name)}`}
-                    className="text-xs font-bold text-blue-600 hover:text-blue-800"
-                  >
-                    Ver Atividades Atribuídas
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/atividades?q=${encodeURIComponent(a.name)}`}
+                      className="text-xs font-bold text-blue-600 hover:text-blue-800"
+                    >
+                      Tarefas ({a.totalTasks})
+                    </Link>
+                    <span className="text-slate-300">•</span>
+                    <Link
+                      href={`/atualizar?r=${a.id}`}
+                      target="_blank"
+                      className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
+                      title="Abrir o Portal do Executor como este usuário"
+                    >
+                      <Smartphone className="w-3.5 h-3.5" />
+                      <span>Ver Portal</span>
+                    </Link>
+                  </div>
 
                   <div className="flex items-center gap-1">
                     <button

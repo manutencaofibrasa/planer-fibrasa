@@ -14,6 +14,8 @@ import {
   AlertCircle,
   Wrench,
   ChevronRight,
+  Smartphone,
+  ExternalLink,
 } from "lucide-react";
 import { getDashboardStats } from "@/lib/repository";
 
@@ -115,6 +117,22 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
             </Link>
           );
         })}
+
+        {/* Chão de Fábrica - Portal do Executor */}
+        <div className="pt-4 px-3 pb-1.5 text-[10px] font-bold tracking-wider text-emerald-400 uppercase">
+          Chão de Fábrica
+        </div>
+        <Link
+          href="/atualizar"
+          onClick={onClose}
+          className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all bg-emerald-950/40 text-emerald-300 border border-emerald-800/60 hover:bg-emerald-900/50 shadow-2xs group"
+        >
+          <div className="flex items-center gap-2.5">
+            <Smartphone className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+            <span>Portal do Executor</span>
+          </div>
+          <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
+        </Link>
       </nav>
 
       {/* Alerta de Atrasos se houver */}

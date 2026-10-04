@@ -274,6 +274,28 @@ export async function saveTask(task: Omit<Task, "id" | "created_at" | "updated_a
   return newTask;
 }
 
+export async function updateTaskExecution(
+  taskId: string,
+  updates: {
+    status: TaskStatus;
+    progress_percent: number;
+    notes?: string | null;
+    impediment?: string | null;
+  }
+): Promise<Task> {
+  const existing = await getTaskById(taskId);
+  if (!existing) throw new Error("Atividade não encontrada");
+
+  const now = new Date().toISOString();
+  const completedAt = updates.status === "concluida" ? (existing.completed_at || now) : null;
+
+  return await saveTask({
+    ...existing,
+    ...updates,
+    completed_at: completedAt,
+  });
+}
+
 export async function deleteTask(id: string): Promise<boolean> {
   if (isSupabaseConfigured() && supabase) {
     const { error } = await supabase.from("tasks").delete().eq("id", id);
