@@ -16,12 +16,14 @@ import {
   Edit2,
   Trash2,
   RefreshCw,
+  FileSpreadsheet,
 } from "lucide-react";
 import { Project, Task } from "@/types";
 import { getProjectById, getTasks, saveTask, deleteTask, deleteProject } from "@/lib/repository";
 import { formatDateBR, isOverdue, PROJECT_STATUS_CONFIG, PRIORITY_CONFIG, TASK_STATUS_CONFIG } from "@/lib/utils";
 import { WhatsAppButton } from "@/components/shared/WhatsAppButton";
 import { TaskModal } from "@/components/tasks/TaskModal";
+import { ImportTasksModal } from "@/components/tasks/ImportTasksModal";
 import { ProjectModal } from "@/components/projects/ProjectModal";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { useToast } from "@/context/ToastContext";
@@ -38,6 +40,7 @@ export default function ProjectDetailsPage() {
 
   // Modals
   const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [projectModalOpen, setProjectModalOpen] = useState(false);
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
@@ -246,16 +249,26 @@ export default function ProjectDetailsPage() {
             <p className="text-xs text-slate-500">Cronograma detalhado de intervenções mecânicas e elétricas</p>
           </div>
 
-          <button
-            onClick={() => {
-              setTaskToEdit(null);
-              setTaskModalOpen(true);
-            }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#147846] hover:bg-[#0f6138] text-white rounded-lg text-xs font-semibold transition shadow-xs"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Adicionar Atividade</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setImportModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold transition shadow-2xs"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+              <span>Carga por Planilha</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setTaskToEdit(null);
+                setTaskModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#147846] hover:bg-[#0f6138] text-white rounded-lg text-xs font-semibold transition shadow-xs"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Adicionar Atividade</span>
+            </button>
+          </div>
         </div>
 
         {tasks.length > 0 ? (
@@ -390,6 +403,14 @@ export default function ProjectDetailsPage() {
         taskToEdit={taskToEdit}
         defaultProjectId={project.id}
         onSaved={() => loadData()}
+      />
+
+      {/* Import Tasks Modal */}
+      <ImportTasksModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        defaultProjectId={project.id}
+        onSuccess={() => loadData()}
       />
 
       {/* Project Edit Modal */}

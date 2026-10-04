@@ -20,12 +20,14 @@ import {
   ExternalLink,
   MessageCircle,
   RotateCcw,
+  FileSpreadsheet,
 } from "lucide-react";
 import { Task, Priority, TaskStatus, Project, Assignee } from "@/types";
 import { getTasks, getProjects, getAssignees, getSettings, saveTask, deleteTask } from "@/lib/repository";
 import { formatDateBR, isOverdue, calculateDaysOverdue, PRIORITY_CONFIG, TASK_STATUS_CONFIG } from "@/lib/utils";
 import { WhatsAppButton } from "@/components/shared/WhatsAppButton";
 import { TaskModal } from "@/components/tasks/TaskModal";
+import { ImportTasksModal } from "@/components/tasks/ImportTasksModal";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { useToast } from "@/context/ToastContext";
 
@@ -51,6 +53,7 @@ function AtividadesContent() {
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -170,16 +173,26 @@ function AtividadesContent() {
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            setTaskToEdit(null);
-            setModalOpen(true);
-          }}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-[#147846] hover:bg-[#0f6138] text-white rounded-lg text-xs sm:text-sm font-semibold transition shadow-xs"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Nova Atividade</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setImportModalOpen(true)}
+            className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs sm:text-sm font-bold transition shadow-2xs"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+            <span>Carga por Planilha</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setTaskToEdit(null);
+              setModalOpen(true);
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#147846] hover:bg-[#0f6138] text-white rounded-lg text-xs sm:text-sm font-semibold transition shadow-xs"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Nova Atividade</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter Card */}
@@ -503,6 +516,13 @@ function AtividadesContent() {
         }}
         taskToEdit={taskToEdit}
         onSaved={() => loadData()}
+      />
+
+      {/* Import Tasks Modal */}
+      <ImportTasksModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onSuccess={() => loadData()}
       />
 
       {/* Confirm Deletion */}

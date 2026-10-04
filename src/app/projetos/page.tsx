@@ -18,11 +18,13 @@ import {
   ExternalLink,
   Search,
   Filter,
+  FileSpreadsheet,
 } from "lucide-react";
 import { Project, Task, ProjectStatus, Priority } from "@/types";
 import { getProjects, getTasks, deleteProject } from "@/lib/repository";
 import { formatDateBR, isOverdue, PROJECT_STATUS_CONFIG, PRIORITY_CONFIG } from "@/lib/utils";
 import { ProjectModal } from "@/components/projects/ProjectModal";
+import { ImportTasksModal } from "@/components/tasks/ImportTasksModal";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { useToast } from "@/context/ToastContext";
 
@@ -42,6 +44,8 @@ export default function ProjectsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [targetImportProjectId, setTargetImportProjectId] = useState<string | undefined>(undefined);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -123,16 +127,29 @@ export default function ProjectsPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            setEditingProject(null);
-            setModalOpen(true);
-          }}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-[#147846] hover:bg-[#0f6138] text-white rounded-lg text-xs sm:text-sm font-semibold transition shadow-xs"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Novo Projeto</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setTargetImportProjectId(undefined);
+              setImportModalOpen(true);
+            }}
+            className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs sm:text-sm font-bold transition shadow-2xs"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+            <span>Carga por Planilha</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setEditingProject(null);
+              setModalOpen(true);
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#147846] hover:bg-[#0f6138] text-white rounded-lg text-xs sm:text-sm font-semibold transition shadow-xs"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Novo Projeto</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter Bar */}
@@ -258,6 +275,16 @@ export default function ProjectsPage() {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => {
+                        setTargetImportProjectId(p.id);
+                        setImportModalOpen(true);
+                      }}
+                      className="p-1.5 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded transition"
+                      title="Importar planilha de atividades"
+                    >
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                    </button>
+                    <button
+                      onClick={() => {
                         setEditingProject(p);
                         setModalOpen(true);
                       }}
@@ -297,7 +324,21 @@ export default function ProjectsPage() {
           setEditingProject(null);
         }}
         projectToEdit={editingProject}
-        onSaved={() => loadData()}
+        onSaved={(savedProj) => {
+          loadData();
+          if (!editingProject) {
+            setTargetImportProjectId(savedProj.id);
+            setImportModalOpen(true);
+          }
+        }}
+      />
+
+      {/* Modal de Carga por Planilha */}
+      <ImportTasksModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        defaultProjectId={targetImportProjectId}
+        onSuccess={() => loadData()}
       />
 
       {/* Diálogo de Confirmação de Exclusão */}

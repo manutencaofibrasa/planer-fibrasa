@@ -292,6 +292,58 @@ export async function deleteTask(id: string): Promise<boolean> {
   return true;
 }
 
+export async function saveTasksBatch(newTasks: Array<Omit<Task, "id" | "created_at" | "updated_at">>): Promise<Task[]> {
+  const now = new Date().toISOString();
+
+  // Buscar projetos e responsáveis para enriquecer dados
+  const [projects, assignees] = await Promise.all([getProjects(), getAssignees()]);
+
+  const enrichedList = newTasks.map((task) => {
+    const proj = projects.find((p) => p.id === task.project_id);
+    const ass = assignees.find((a) => a.id === task.assignee_id);
+    const completedAt = task.status === "concluida" ? (task.completed_at || now) : null;
+
+    return {
+      ...task,
+      project_name: proj?.name || task.project_name || "Geral",
+      assignee_name: ass?.name || task.assignee_name || "Não atribuído",
+      assignee_phone: ass?.phone || task.assignee_phone || "",
+      completed_at: completedAt,
+      created_at: now,
+      updated_at: now,
+    };
+  });
+
+  if (isSupabaseConfigured() && supabase) {
+    const payloads = enrichedList.map((t) => {
+      const p = cleanPayload(t);
+      delete p.id;
+      return p;
+    });
+
+    const { data, error } = await supabase.from("tasks").insert(payloads).select();
+    if (error) {
+      console.error("Erro ao inserir lote de tarefas no Supabase:", error);
+      throw new Error(error.message);
+    }
+    if (data) {
+      notifyUpdate();
+      return data;
+    }
+  }
+
+  const tasks = await getTasks();
+  const createdItems: Task[] = enrichedList.map((item, idx) => ({
+    ...item,
+    id: `task-${Date.now()}-${idx}`,
+  }));
+
+  tasks.unshift(...createdItems);
+  localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
+  notifyUpdate();
+  return createdItems;
+}
+
 // ==========================================
 // RESPONSÁVEIS
 // ==========================================
