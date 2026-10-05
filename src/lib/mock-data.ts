@@ -331,6 +331,7 @@ export const INITIAL_SETTINGS: SystemSettings = {
     "Coordenação de Manutenção"
   ],
   equipments: [
+    "Chiller Hitachi",
     "Chiller Sabroe 01",
     "Chiller Sabroe 02",
     "Bomba Primária Chiller",

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { X, CheckCircle, AlertCircle, Wrench, Calendar, User, FolderKanban, ShieldAlert } from "lucide-react";
 import { Task, Priority, TaskStatus, Project, Assignee } from "@/types";
-import { getProjects, getAssignees, getSettings, saveTask } from "@/lib/repository";
+import { getProjects, getAssignees, getSettings, getTasks, saveTask } from "@/lib/repository";
 import { useToast } from "@/context/ToastContext";
 import { getTodayDateString, extractCleanNotes } from "@/lib/utils";
 
@@ -21,6 +21,8 @@ export function TaskModal({ isOpen, onClose, taskToEdit, defaultProjectId, onSav
   const [assignees, setAssignees] = useState<Assignee[]>([]);
   const [sectors, setSectors] = useState<string[]>([]);
   const [equipments, setEquipments] = useState<string[]>([]);
+  const [isCustomEquipment, setIsCustomEquipment] = useState(false);
+  const [isCustomSector, setIsCustomSector] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Form State
@@ -40,15 +42,41 @@ export function TaskModal({ isOpen, onClose, taskToEdit, defaultProjectId, onSav
 
   useEffect(() => {
     async function loadMeta() {
-      const [projs, asses, settings] = await Promise.all([
+      setIsCustomEquipment(false);
+      setIsCustomSector(false);
+
+      const [projs, asses, settings, allTasks] = await Promise.all([
         getProjects(),
         getAssignees(),
         getSettings(),
+        getTasks(),
       ]);
       setProjects(projs);
       setAssignees(asses);
-      setSectors(settings.sectors || []);
-      setEquipments(settings.equipments || []);
+
+      // Agrupa todos os equipamentos (configurações + existentes nas tarefas + tarefa em edição)
+      const taskEquipments = allTasks.map((t) => t.equipment).filter(Boolean);
+      const currentEquip = taskToEdit?.equipment ? [taskToEdit.equipment] : [];
+      const mergedEquipments = Array.from(
+        new Set([
+          ...currentEquip,
+          ...(settings.equipments || []),
+          ...taskEquipments,
+        ])
+      ).filter(Boolean).sort((a, b) => a.localeCompare("pt-BR"));
+      setEquipments(mergedEquipments);
+
+      // Agrupa todos os setores (configurações + existentes nas tarefas + tarefa em edição)
+      const taskSectors = allTasks.map((t) => t.sector).filter(Boolean);
+      const currentSector = taskToEdit?.sector ? [taskToEdit.sector] : [];
+      const mergedSectors = Array.from(
+        new Set([
+          ...currentSector,
+          ...(settings.sectors || []),
+          ...taskSectors,
+        ])
+      ).filter(Boolean).sort((a, b) => a.localeCompare("pt-BR"));
+      setSectors(mergedSectors);
 
       if (taskToEdit) {
         setTitle(taskToEdit.title);
@@ -70,8 +98,8 @@ export function TaskModal({ isOpen, onClose, taskToEdit, defaultProjectId, onSav
         setDescription("");
         setProjectId(defaultProjectId || (projs.length > 0 ? projs[0].id : ""));
         setAssigneeId(asses.length > 0 ? asses[0].id : "");
-        setSector(settings.sectors?.[0] || "Utilidades");
-        setEquipment(settings.equipments?.[0] || "Chiller Sabroe 01");
+        setSector(mergedSectors[0] || "Utilidades");
+        setEquipment(mergedEquipments[0] || "Chiller Sabroe 01");
         setStartDate(getTodayDateString());
         setDueDate(getTodayDateString());
         setPriority("media");
@@ -206,6 +234,9 @@ export function TaskModal({ isOpen, onClose, taskToEdit, defaultProjectId, onSav
                   className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-900"
                 >
                   <option value="">Selecione um projeto...</option>
+                  {projectId && !projects.some((p) => p.id === projectId) && taskToEdit?.project_name && (
+                    <option value={projectId}>{taskToEdit.project_name}</option>
+                  )}
                   {projects.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
@@ -226,6 +257,9 @@ export function TaskModal({ isOpen, onClose, taskToEdit, defaultProjectId, onSav
                   className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-900"
                 >
                   <option value="">Selecione um responsável...</option>
+                  {assigneeId && !assignees.some((a) => a.id === assigneeId) && taskToEdit?.assignee_name && (
+                    <option value={assigneeId}>{taskToEdit.assignee_name}</option>
+                  )}
                   {assignees.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.name} ({a.role})
@@ -238,34 +272,99 @@ export function TaskModal({ isOpen, onClose, taskToEdit, defaultProjectId, onSav
             {/* Setor e Equipamento */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Setor
-                </label>
-                <select
-                  value={sector}
-                  onChange={(e) => setSector(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-900"
-                >
-                  {sectors.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Setor *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomSector(!isCustomSector)}
+                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 underline"
+                  >
+                    {isCustomSector ? "Selecionar da lista" : "+ Digitar outro"}
+                  </button>
+                </div>
+                {isCustomSector ? (
+                  <input
+                    type="text"
+                    required
+                    value={sector}
+                    onChange={(e) => setSector(e.target.value)}
+                    placeholder="Digite o setor..."
+                    className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-900"
+                  />
+                ) : (
+                  <select
+                    required
+                    value={sector}
+                    onChange={(e) => {
+                      if (e.target.value === "__novo__") {
+                        setIsCustomSector(true);
+                        setSector("");
+                      } else {
+                        setSector(e.target.value);
+                      }
+                    }}
+                    className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-900"
+                  >
+                    {sector && !sectors.includes(sector) && (
+                      <option value={sector}>{sector}</option>
+                    )}
+                    {sectors.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                    <option value="__novo__">+ Outro setor (digitar)...</option>
+                  </select>
+                )}
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                  <Wrench className="w-3.5 h-3.5 text-slate-500" />
-                  Equipamento
-                </label>
-                <select
-                  value={equipment}
-                  onChange={(e) => setEquipment(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-900"
-                >
-                  {equipments.map((eq) => (
-                    <option key={eq} value={eq}>{eq}</option>
-                  ))}
-                </select>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <Wrench className="w-3.5 h-3.5 text-slate-500" />
+                    Equipamento *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomEquipment(!isCustomEquipment)}
+                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 underline"
+                  >
+                    {isCustomEquipment ? "Selecionar da lista" : "+ Digitar outro"}
+                  </button>
+                </div>
+                {isCustomEquipment ? (
+                  <input
+                    type="text"
+                    required
+                    value={equipment}
+                    onChange={(e) => setEquipment(e.target.value)}
+                    placeholder="Ex: Chiller Hitachi, Extrusora 150..."
+                    className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-900 font-medium"
+                  />
+                ) : (
+                  <select
+                    required
+                    value={equipment}
+                    onChange={(e) => {
+                      if (e.target.value === "__novo__") {
+                        setIsCustomEquipment(true);
+                        setEquipment("");
+                      } else {
+                        setEquipment(e.target.value);
+                      }
+                    }}
+                    className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-900 font-medium"
+                  >
+                    {/* Garante que se o equipamento for Chiller Hitachi ou outro não listado originalmente, ele renderiza e fica selecionado! */}
+                    {equipment && !equipments.includes(equipment) && (
+                      <option value={equipment}>{equipment}</option>
+                    )}
+                    {equipments.map((eq) => (
+                      <option key={eq} value={eq}>{eq}</option>
+                    ))}
+                    <option value="__novo__">+ Outro equipamento (digitar)...</option>
+                  </select>
+                )}
               </div>
             </div>
 
