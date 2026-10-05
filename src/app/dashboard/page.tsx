@@ -313,18 +313,18 @@ export default function DashboardPage() {
 
         {stats?.criticalTasks && stats.criticalTasks.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs sm:text-sm">
+            <table className="w-full text-left text-xs sm:text-sm min-w-[1050px]">
               <thead className="bg-slate-50/80 text-slate-600 uppercase text-[11px] font-bold tracking-wider border-b border-slate-200">
                 <tr>
-                  <th className="py-3 px-4">Atividade & Equipamento</th>
-                  <th className="py-3 px-4">Projeto</th>
-                  <th className="py-3 px-4">Responsável</th>
-                  <th className="py-3 px-4">Prazo</th>
-                  <th className="py-3 px-4">Atraso</th>
-                  <th className="py-3 px-4">Prioridade</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-center">Cobrança WhatsApp</th>
-                  <th className="py-3 px-4 text-right">Ação</th>
+                  <th className="py-3 px-3.5 w-[35%] min-w-[320px]">Atividade & Equipamento</th>
+                  <th className="py-3 px-3.5 w-[16%] min-w-[160px]">Projeto</th>
+                  <th className="py-3 px-3.5 w-[14%] min-w-[140px]">Responsável</th>
+                  <th className="py-3 px-3 w-[90px] whitespace-nowrap">Prazo</th>
+                  <th className="py-3 px-3 w-[75px] whitespace-nowrap text-center">Atraso</th>
+                  <th className="py-3 px-3 w-[85px] whitespace-nowrap text-center">Prioridade</th>
+                  <th className="py-3 px-3 w-[95px] whitespace-nowrap text-center">Status</th>
+                  <th className="py-3 px-3 w-[115px] text-center whitespace-nowrap">Cobrança</th>
+                  <th className="py-3 px-3.5 w-[70px] text-right whitespace-nowrap">Ação</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -335,17 +335,19 @@ export default function DashboardPage() {
 
                   return (
                     <tr key={task.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-3 px-4 min-w-[240px]">
-                        <div className="font-semibold text-slate-900 leading-tight">{task.title}</div>
-                        <div className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5">
-                          <span className="font-medium text-slate-700">{task.equipment}</span>
-                          <span>•</span>
-                          <span>{task.sector}</span>
+                      <td className="py-3.5 px-3.5 align-top">
+                        <div className="font-semibold text-slate-900 leading-snug">{task.title}</div>
+                        <div className="text-xs text-slate-500 flex flex-wrap items-center gap-1.5 mt-1">
+                          <span className="font-medium text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/80">
+                            {task.equipment}
+                          </span>
+                          <span className="text-slate-400">•</span>
+                          <span className="text-slate-600 font-normal">{task.sector}</span>
                         </div>
 
                         {/* Último Apontamento do Técnico */}
                         {cleanNotes && (
-                          <div className="mt-1.5 flex items-start gap-1.5 p-2 rounded-lg bg-blue-50/70 border border-blue-200/80 text-blue-900 text-xs">
+                          <div className="mt-2 flex items-start gap-1.5 p-2 rounded-lg bg-blue-50/70 border border-blue-200/80 text-blue-900 text-xs">
                             <MessageSquare className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
                             <div className="leading-snug">
                               <span className="font-bold text-blue-800 mr-1">Último Apontamento:</span>
@@ -355,33 +357,38 @@ export default function DashboardPage() {
                         )}
 
                         {task.impediment && (
-                          <div className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-semibold text-rose-800 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                            <ShieldAlert className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                            <span>Impedimento: {task.impediment}</span>
+                          <div className="mt-2 flex items-start gap-1.5 text-[11px] font-semibold text-rose-800 bg-rose-50 p-2 rounded-lg border border-rose-200 leading-snug">
+                            <ShieldAlert className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+                            <div>
+                              <span className="font-bold text-rose-900 mr-1">Impedimento:</span>
+                              <span className="text-rose-800">{task.impediment}</span>
+                            </div>
                           </div>
                         )}
                       </td>
 
-                      <td className="py-3 px-4 text-slate-700 font-medium whitespace-nowrap">
-                        {task.project_name}
-                      </td>
-
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-bold">
-                            {task.assignee_name?.charAt(0) || "U"}
-                          </div>
-                          <span className="text-slate-800 font-medium">{task.assignee_name}</span>
+                      <td className="py-3.5 px-3.5 align-top text-slate-700 font-medium">
+                        <div className="leading-snug line-clamp-2" title={task.project_name}>
+                          {task.project_name}
                         </div>
                       </td>
 
-                      <td className="py-3 px-4 whitespace-nowrap text-slate-700 font-medium">
+                      <td className="py-3.5 px-3.5 align-top">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-bold shrink-0">
+                            {task.assignee_name?.charAt(0) || "U"}
+                          </div>
+                          <span className="text-slate-800 font-medium leading-snug">{task.assignee_name}</span>
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-3 align-top whitespace-nowrap text-slate-700 font-medium">
                         {formatDateBR(task.due_date)}
                       </td>
 
-                      <td className="py-3 px-4 whitespace-nowrap">
+                      <td className="py-3.5 px-3 align-top whitespace-nowrap text-center">
                         {task.daysOverdue > 0 ? (
-                          <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">
+                          <span className="inline-block px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">
                             {task.daysOverdue} {task.daysOverdue === 1 ? "dia" : "dias"}
                           </span>
                         ) : (
@@ -389,24 +396,24 @@ export default function DashboardPage() {
                         )}
                       </td>
 
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${priority.badge}`}>
+                      <td className="py-3.5 px-3 align-top whitespace-nowrap text-center">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold border ${priority.badge}`}>
                           {priority.label}
                         </span>
                       </td>
 
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${status.badge}`}>
+                      <td className="py-3.5 px-3 align-top whitespace-nowrap text-center">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold border ${status.badge}`}>
                           {status.label}
                         </span>
                       </td>
 
-                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                      <td className="py-3.5 px-3 align-top text-center whitespace-nowrap">
                         <WhatsAppButton task={task} variant="outline" size="sm" />
                       </td>
 
-                      <td className="py-3 px-4 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1.5">
+                      <td className="py-3.5 px-3.5 align-top text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => handleQuickComplete(task)}
                             title="Concluir atividade"

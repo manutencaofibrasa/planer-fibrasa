@@ -359,18 +359,18 @@ function AtividadesContent() {
 
         {filteredTasks.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs sm:text-sm">
+            <table className="w-full text-left text-xs sm:text-sm min-w-[1100px]">
               <thead className="bg-slate-50/80 text-slate-600 uppercase text-[11px] font-bold tracking-wider border-b border-slate-200">
                 <tr>
-                  <th className="py-3 px-4">Atividade & Detalhes</th>
-                  <th className="py-3 px-4">Projeto & Setor</th>
-                  <th className="py-3 px-4">Responsável</th>
-                  <th className="py-3 px-4">Prazo</th>
-                  <th className="py-3 px-4">Progresso</th>
-                  <th className="py-3 px-4">Prioridade</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-center">Cobrança WhatsApp</th>
-                  <th className="py-3 px-4 text-right">Ações</th>
+                  <th className="py-3 px-3.5 w-[33%] min-w-[300px]">Atividade & Detalhes</th>
+                  <th className="py-3 px-3.5 w-[16%] min-w-[150px]">Projeto & Setor</th>
+                  <th className="py-3 px-3.5 w-[14%] min-w-[140px]">Responsável</th>
+                  <th className="py-3 px-3 w-[100px] whitespace-nowrap">Prazo</th>
+                  <th className="py-3 px-3 w-[90px] whitespace-nowrap">Progresso</th>
+                  <th className="py-3 px-3 w-[85px] whitespace-nowrap text-center">Prioridade</th>
+                  <th className="py-3 px-3 w-[120px] whitespace-nowrap">Status</th>
+                  <th className="py-3 px-3 w-[110px] text-center whitespace-nowrap">Cobrança</th>
+                  <th className="py-3 px-3.5 w-[80px] text-right whitespace-nowrap">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -384,19 +384,21 @@ function AtividadesContent() {
                   return (
                     <tr key={task.id} className="hover:bg-slate-50/70 transition-colors">
                       {/* Atividade */}
-                      <td className="py-3 px-4 max-w-sm">
+                      <td className="py-3.5 px-3.5 align-top">
                         <div className="font-bold text-slate-900 leading-snug">{task.title}</div>
                         {task.description && (
-                          <div className="text-xs text-slate-500 line-clamp-1 mt-0.5">{task.description}</div>
+                          <div className="text-xs text-slate-500 line-clamp-2 mt-0.5">{task.description}</div>
                         )}
-                        <div className="text-xs text-slate-600 flex items-center gap-1.5 mt-1">
-                          <Wrench className="w-3 text-slate-400" />
-                          <span className="font-semibold text-slate-700">{task.equipment}</span>
+                        <div className="text-xs text-slate-600 flex flex-wrap items-center gap-1.5 mt-1.5">
+                          <Wrench className="w-3 text-slate-400 shrink-0" />
+                          <span className="font-semibold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/80">
+                            {task.equipment}
+                          </span>
                         </div>
 
                         {/* Apontamento do Técnico */}
                         {cleanNotes && (
-                          <div className="mt-1.5 flex items-start gap-1.5 p-2 rounded-lg bg-blue-50/70 border border-blue-200/80 text-blue-900 text-xs">
+                          <div className="mt-2 flex items-start gap-1.5 p-2 rounded-lg bg-blue-50/70 border border-blue-200/80 text-blue-900 text-xs">
                             <MessageSquare className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
                             <div className="leading-snug">
                               <span className="font-bold text-blue-800 mr-1">Último Apontamento:</span>
@@ -406,27 +408,32 @@ function AtividadesContent() {
                         )}
 
                         {task.impediment && (
-                          <div className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-semibold text-rose-800 bg-rose-50 px-2.5 py-1 rounded-md border border-rose-200">
-                            <ShieldAlert className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                            <span>Impedimento: {task.impediment}</span>
+                          <div className="mt-2 flex items-start gap-1.5 text-[11px] font-semibold text-rose-800 bg-rose-50 p-2 rounded-lg border border-rose-200 leading-snug">
+                            <ShieldAlert className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+                            <div>
+                              <span className="font-bold text-rose-900 mr-1">Impedimento:</span>
+                              <span className="text-rose-800">{task.impediment}</span>
+                            </div>
                           </div>
                         )}
                       </td>
 
                       {/* Projeto & Setor */}
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <div className="font-semibold text-slate-800">{task.project_name}</div>
-                        <div className="text-xs text-slate-500">{task.sector}</div>
+                      <td className="py-3.5 px-3.5 align-top">
+                        <div className="font-semibold text-slate-800 line-clamp-2 leading-snug" title={task.project_name}>
+                          {task.project_name}
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1">{task.sector}</div>
                       </td>
 
                       {/* Responsável */}
-                      <td className="py-3 px-4 whitespace-nowrap">
+                      <td className="py-3.5 px-3.5 align-top">
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-bold">
+                          <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-bold shrink-0">
                             {task.assignee_name?.charAt(0) || "U"}
                           </div>
                           <div>
-                            <div className="font-semibold text-slate-800">{task.assignee_name}</div>
+                            <div className="font-semibold text-slate-800 leading-snug">{task.assignee_name}</div>
                             {task.assignee_phone && (
                               <div className="text-[10px] text-slate-400">{task.assignee_phone}</div>
                             )}
@@ -435,7 +442,7 @@ function AtividadesContent() {
                       </td>
 
                       {/* Prazo */}
-                      <td className="py-3 px-4 whitespace-nowrap">
+                      <td className="py-3.5 px-3 align-top whitespace-nowrap">
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-1.5 text-xs text-slate-700">
                             <span className="text-[11px] text-slate-400">Prazo:</span>
@@ -456,8 +463,8 @@ function AtividadesContent() {
                       </td>
 
                       {/* Progresso */}
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <div className="w-24">
+                      <td className="py-3.5 px-3 align-top whitespace-nowrap">
+                        <div className="w-20">
                           <div className="flex items-center justify-between text-[11px] font-bold mb-0.5">
                             <span className="text-slate-700">{task.progress_percent}%</span>
                           </div>
@@ -471,14 +478,14 @@ function AtividadesContent() {
                       </td>
 
                       {/* Prioridade */}
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${priority.badge}`}>
+                      <td className="py-3.5 px-3 align-top whitespace-nowrap text-center">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold border ${priority.badge}`}>
                           {priority.label}
                         </span>
                       </td>
 
                       {/* Status interativo */}
-                      <td className="py-3 px-4 whitespace-nowrap">
+                      <td className="py-3.5 px-3 align-top whitespace-nowrap">
                         <select
                           value={task.status}
                           onChange={(e) => handleQuickStatusChange(task, e.target.value as TaskStatus)}
@@ -492,12 +499,12 @@ function AtividadesContent() {
                       </td>
 
                       {/* Cobrança WhatsApp */}
-                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                      <td className="py-3.5 px-3 align-top text-center whitespace-nowrap">
                         <WhatsAppButton task={task} variant="outline" size="sm" />
                       </td>
 
                       {/* Ações */}
-                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                      <td className="py-3.5 px-3.5 align-top text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => {
