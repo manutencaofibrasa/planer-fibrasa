@@ -19,7 +19,6 @@ import {
   formatDateBR,
   isOverdue,
   extractCleanNotes,
-  extractPromisedDate,
   PRIORITY_CONFIG,
   TASK_STATUS_CONFIG,
 } from "@/lib/utils";
@@ -228,9 +227,7 @@ export default function CalendarioPage() {
               selectedDayTasks.map((task) => {
                 const priority = PRIORITY_CONFIG[task.priority];
                 const status = TASK_STATUS_CONFIG[task.status];
-                const overdue = isOverdue(task.due_date, task.status);
                 const cleanNotes = extractCleanNotes(task.notes);
-                const promisedDate = task.promised_date || extractPromisedDate(task.notes);
 
                 return (
                   <div
@@ -253,11 +250,6 @@ export default function CalendarioPage() {
                         <Clock className="w-3.5 h-3.5 text-slate-400" />
                         <span>Resp: <strong className="text-slate-800">{task.assignee_name}</strong></span>
                       </div>
-                      {promisedDate && (
-                        <div className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 inline-block">
-                          🤝 Nova Previsão: {formatDateBR(promisedDate)}
-                        </div>
-                      )}
                     </div>
 
                     {/* Apontamento Técnico */}

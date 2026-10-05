@@ -21,29 +21,9 @@ export function formatDateBR(dateString?: string | null): string {
   }
 }
 
-export function extractPromisedDate(notes?: string | null): string | null {
-  if (!notes) return null;
-  const match = notes.match(/\[Previsão:\s*(\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})\]/i);
-  if (!match) return null;
-  const raw = match[1];
-  if (raw.includes("/")) {
-    const parts = raw.split("/");
-    return `${parts[2]}-${parts[1]}-${parts[0]}`;
-  }
-  return raw;
-}
-
 export function extractCleanNotes(notes?: string | null): string {
   if (!notes) return "";
   return notes.replace(/\[Previsão:\s*(\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})\]\s*/gi, "").trim();
-}
-
-export function formatNotesWithPromisedDate(notesText?: string | null, promisedDate?: string | null): string {
-  const clean = extractCleanNotes(notesText);
-  if (promisedDate && promisedDate.trim()) {
-    return `[Previsão: ${promisedDate.trim()}] ${clean}`.trim();
-  }
-  return clean;
 }
 
 export function getTodayDateString(): string {

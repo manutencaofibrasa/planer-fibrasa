@@ -30,7 +30,6 @@ import {
   isOverdue,
   calculateDaysOverdue,
   extractCleanNotes,
-  extractPromisedDate,
   PRIORITY_CONFIG,
   TASK_STATUS_CONFIG,
 } from "@/lib/utils";
@@ -381,7 +380,6 @@ function AtividadesContent() {
                   const overdue = isOverdue(task.due_date, task.status);
                   const daysOver = calculateDaysOverdue(task.due_date);
                   const cleanNotes = extractCleanNotes(task.notes);
-                  const promisedDate = task.promised_date || extractPromisedDate(task.notes);
 
                   return (
                     <tr key={task.id} className="hover:bg-slate-50/70 transition-colors">
@@ -392,7 +390,7 @@ function AtividadesContent() {
                           <div className="text-xs text-slate-500 line-clamp-1 mt-0.5">{task.description}</div>
                         )}
                         <div className="text-xs text-slate-600 flex items-center gap-1.5 mt-1">
-                          <Wrench className="w-3 h-3 text-slate-400" />
+                          <Wrench className="w-3 text-slate-400" />
                           <span className="font-semibold text-slate-700">{task.equipment}</span>
                         </div>
 
@@ -441,17 +439,10 @@ function AtividadesContent() {
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-1.5 text-xs text-slate-700">
                             <span className="text-[11px] text-slate-400">Prazo:</span>
-                            <span className={`font-bold ${promisedDate && overdue ? "line-through text-slate-400" : "text-slate-800"}`}>
+                            <span className="font-bold text-slate-800">
                               {formatDateBR(task.due_date)}
                             </span>
                           </div>
-
-                          {promisedDate && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-300">
-                              <Calendar className="w-3 h-3 text-amber-600 shrink-0" />
-                              Nova Previsão: {formatDateBR(promisedDate)}
-                            </span>
-                          )}
 
                           {overdue && task.status !== "concluida" ? (
                             <span className="inline-flex items-center gap-1 text-[11px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded border border-red-200">

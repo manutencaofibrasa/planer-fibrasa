@@ -5,9 +5,7 @@ import {
   isDueToday,
   calculateDaysOverdue,
   TASK_STATUS_CONFIG,
-  extractPromisedDate,
   extractCleanNotes,
-  formatNotesWithPromisedDate,
 } from "./utils";
 import { supabase, isSupabaseConfigured } from "./supabase";
 
@@ -199,7 +197,7 @@ export async function getTasks(filters?: { projectId?: string; assigneeId?: stri
 
   return list.map((t) => ({
     ...t,
-    promised_date: t.promised_date || extractPromisedDate(t.notes),
+    notes: t.notes ? extractCleanNotes(t.notes) : t.notes,
   }));
 }
 
@@ -217,7 +215,7 @@ export async function saveTask(task: Omit<Task, "id" | "created_at" | "updated_a
   const proj = projects.find((p) => p.id === task.project_id);
   const ass = assignees.find((a) => a.id === task.assignee_id);
 
-  const notesWithPromised = formatNotesWithPromisedDate(task.notes || "", task.promised_date);
+  const cleanNotes = task.notes ? extractCleanNotes(task.notes) : null;
 
   const enriched = {
     ...task,
@@ -225,14 +223,12 @@ export async function saveTask(task: Omit<Task, "id" | "created_at" | "updated_a
     assignee_name: ass?.name || task.assignee_name || "Não atribuído",
     assignee_phone: ass?.phone || task.assignee_phone || "",
     completed_at: completedAt,
-    notes: notesWithPromised,
-    promised_date: task.promised_date || extractPromisedDate(task.notes),
+    notes: cleanNotes,
   };
 
   if (isSupabaseConfigured() && supabase) {
     if (task.id) {
       const payload = cleanPayload({ ...enriched, updated_at: now });
-      delete payload.promised_date; // Compatibilidade com schema cache do Supabase
       const { data, error } = await supabase
         .from("tasks")
         .update(payload)
@@ -245,12 +241,11 @@ export async function saveTask(task: Omit<Task, "id" | "created_at" | "updated_a
       }
       if (data) {
         notifyUpdate();
-        return { ...data, promised_date: enriched.promised_date };
+        return data;
       }
     } else {
       const payload = cleanPayload({ ...enriched, created_at: now, updated_at: now });
       delete payload.id;
-      delete payload.promised_date; // Compatibilidade com schema cache do Supabase
       const { data, error } = await supabase
         .from("tasks")
         .insert([payload])
@@ -262,7 +257,7 @@ export async function saveTask(task: Omit<Task, "id" | "created_at" | "updated_a
       }
       if (data) {
         notifyUpdate();
-        return { ...data, promised_date: enriched.promised_date };
+        return data;
       }
     }
   }
@@ -298,7 +293,6 @@ export async function updateTaskExecution(
     progress_percent: number;
     notes?: string | null;
     impediment?: string | null;
-    promised_date?: string | null;
   }
 ): Promise<Task> {
   const existing = await getTaskById(taskId);
@@ -342,16 +336,14 @@ export async function saveTasksBatch(newTasks: Array<Omit<Task, "id" | "created_
     const proj = projects.find((p) => p.id === task.project_id);
     const ass = assignees.find((a) => a.id === task.assignee_id);
     const completedAt = task.status === "concluida" ? (task.completed_at || now) : null;
-
-    const notesWithPromised = formatNotesWithPromisedDate(task.notes || "", task.promised_date);
+    const cleanNotes = task.notes ? extractCleanNotes(task.notes) : null;
 
     return {
       ...task,
       project_name: proj?.name || task.project_name || "Geral",
       assignee_name: ass?.name || task.assignee_name || "Não atribuído",
       assignee_phone: ass?.phone || task.assignee_phone || "",
-      notes: notesWithPromised,
-      promised_date: task.promised_date || extractPromisedDate(task.notes),
+      notes: cleanNotes,
       completed_at: completedAt,
       created_at: now,
       updated_at: now,
@@ -362,7 +354,6 @@ export async function saveTasksBatch(newTasks: Array<Omit<Task, "id" | "created_
     const payloads = enrichedList.map((t) => {
       const p = cleanPayload(t);
       delete p.id;
-      delete p.promised_date; // Compatibilidade com schema cache do Supabase
       return p;
     });
 

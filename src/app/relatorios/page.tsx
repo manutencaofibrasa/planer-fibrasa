@@ -22,7 +22,6 @@ import {
   isOverdue,
   calculateDaysOverdue,
   extractCleanNotes,
-  extractPromisedDate,
   PRIORITY_CONFIG,
   TASK_STATUS_CONFIG,
 } from "@/lib/utils";
@@ -94,7 +93,6 @@ export default function RelatoriosPage() {
       "Equipamento",
       "Data Início",
       "Prazo Original",
-      "Nova Previsão (Técnico)",
       "Status",
       "Prioridade",
       "% Conclusão",
@@ -111,7 +109,6 @@ export default function RelatoriosPage() {
       `"${t.equipment}"`,
       t.start_date,
       t.due_date,
-      t.promised_date || extractPromisedDate(t.notes) || "",
       t.status,
       t.priority,
       t.progress_percent,
@@ -314,7 +311,6 @@ export default function RelatoriosPage() {
                 const status = TASK_STATUS_CONFIG[t.status];
                 const overdue = isOverdue(t.due_date, t.status);
                 const cleanNotes = extractCleanNotes(t.notes);
-                const promisedDate = t.promised_date || extractPromisedDate(t.notes);
 
                 return (
                   <tr key={t.id} className="hover:bg-slate-50/60">
@@ -331,16 +327,9 @@ export default function RelatoriosPage() {
                     <td className="py-2.5 px-3 text-slate-600">{t.sector}</td>
                     <td className="py-2.5 px-3 text-slate-800 font-medium">{t.assignee_name}</td>
                     <td className="py-2.5 px-3 whitespace-nowrap">
-                      <div className="flex flex-col">
-                        <span className={overdue ? "text-red-700 font-bold" : "text-slate-800"}>
-                          {formatDateBR(t.due_date)}
-                        </span>
-                        {promisedDate && (
-                          <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1 rounded border border-amber-200 inline-block mt-0.5">
-                            Nova: {formatDateBR(promisedDate)}
-                          </span>
-                        )}
-                      </div>
+                      <span className={overdue ? "text-red-700 font-bold" : "text-slate-800"}>
+                        {formatDateBR(t.due_date)}
+                      </span>
                     </td>
                     <td className="py-2.5 px-3 whitespace-nowrap">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${priority.badge}`}>

@@ -4,7 +4,6 @@ import {
   calculateDaysOverdue,
   TASK_STATUS_CONFIG,
   extractCleanNotes,
-  extractPromisedDate,
 } from "./utils";
 
 export function formatPhoneNumber(phone?: string | null): string {
@@ -32,7 +31,6 @@ export function generateWhatsAppMessage(
   const daysOverdue = calculateDaysOverdue(task.due_date);
   const formattedDate = formatDateBR(task.due_date);
   const cleanNotes = extractCleanNotes(task.notes);
-  const promisedDate = task.promised_date || extractPromisedDate(task.notes);
   const baseUrl = getBaseAppUrl();
   const directLink = `${baseUrl}/atualizar?r=${encodeURIComponent(task.assignee_id)}&t=${encodeURIComponent(task.id)}`;
 
@@ -46,9 +44,9 @@ Identificamos que a seguinte atividade está com o prazo expirado há *${daysOve
 📂 *Projeto:* ${task.project_name || "Geral"}
 ⚙️ *Equipamento:* ${task.equipment || "N/A"} (${task.sector || "Manutenção"})
 📅 *Prazo Original:* ${formattedDate}
-${promisedDate ? `🤝 *Nova Previsão Combinada:* ${formatDateBR(promisedDate)}\n` : ""}📊 *Progresso Atual:* ${task.progress_percent || 0}%
+📊 *Progresso Atual:* ${task.progress_percent || 0}%
 ${cleanNotes ? `💬 *Último Apontamento:* ${cleanNotes}\n` : ""}${task.impediment ? `🚧 *Impedimento:* ${task.impediment}\n` : ""}
-👉 *Clique no link para apontar o progresso ou repactuar a nova data:*
+👉 *Clique no link para registrar seu apontamento e atualizar o progresso:*
 🔗 ${directLink}`;
   }
 
@@ -62,7 +60,7 @@ Sobre o impedimento registrado na atividade:
 📂 *Projeto:* ${task.project_name || "Geral"}
 🚧 *Impedimento Relatado:* ${task.impediment}
 📅 *Prazo:* ${formattedDate}
-${promisedDate ? `🤝 *Nova Previsão:* ${formatDateBR(promisedDate)}\n` : ""}${cleanNotes ? `💬 *Último Apontamento:* ${cleanNotes}\n` : ""}
+${cleanNotes ? `💬 *Último Apontamento:* ${cleanNotes}\n` : ""}
 Qual o suporte necessário da coordenação de manutenção para destravar essa atividade?
 
 👉 *Atualizar atividade:*
@@ -78,7 +76,7 @@ Segue o alinhamento da atividade sob sua responsabilidade:
 📂 *Projeto:* ${task.project_name || "Geral"}
 ⚙️ *Equipamento:* ${task.equipment || "N/A"} (${task.sector || "Manutenção"})
 📅 *Prazo de Conclusão:* ${formattedDate}
-${promisedDate ? `🤝 *Nova Previsão:* ${formatDateBR(promisedDate)}\n` : ""}🔄 *Status:* ${statusLabel}
+🔄 *Status:* ${statusLabel}
 📊 *Progresso Atual:* ${task.progress_percent || 0}%
 ${cleanNotes ? `💬 *Último Apontamento:* ${cleanNotes}\n` : ""}${task.impediment ? `🚧 *Impedimento:* ${task.impediment}\n` : ""}
 👉 *Clique no link para atualizar o status e apontar o progresso:*
@@ -102,9 +100,7 @@ export function generateAssigneeSummaryMessage(assigneeName: string, assigneeId:
   const pendingTasks = tasks.filter((t) => t.status !== "concluida");
   
   const tasksLines = pendingTasks.slice(0, 5).map((t, idx) => {
-    const pDate = t.promised_date || extractPromisedDate(t.notes);
-    const pDateText = pDate ? ` | 🤝 Nova Previsão: ${formatDateBR(pDate)}` : "";
-    return `${idx + 1}️⃣ *${t.title}*\n   ⚙️ ${t.equipment} | 📅 Prazo: ${formatDateBR(t.due_date)}${pDateText}`;
+    return `${idx + 1}️⃣ *${t.title}*\n   ⚙️ ${t.equipment} | 📅 Prazo: ${formatDateBR(t.due_date)}`;
   }).join("\n\n");
 
   const moreCount = pendingTasks.length > 5 ? `\n\n_(+ ${pendingTasks.length - 5} outras atividades na sua lista)_` : "";

@@ -35,7 +35,6 @@ import { getDashboardStats, saveTask } from "@/lib/repository";
 import {
   formatDateBR,
   extractCleanNotes,
-  extractPromisedDate,
   PRIORITY_CONFIG,
   TASK_STATUS_CONFIG,
 } from "@/lib/utils";
@@ -333,7 +332,6 @@ export default function DashboardPage() {
                   const priority = PRIORITY_CONFIG[task.priority];
                   const status = TASK_STATUS_CONFIG[task.status];
                   const cleanNotes = extractCleanNotes(task.notes);
-                  const promisedDate = task.promised_date || extractPromisedDate(task.notes);
 
                   return (
                     <tr key={task.id} className="hover:bg-slate-50/60 transition-colors">
@@ -377,18 +375,8 @@ export default function DashboardPage() {
                         </div>
                       </td>
 
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <div className="flex flex-col gap-0.5">
-                          <span className={`text-xs ${promisedDate ? "line-through text-slate-400" : "font-medium text-slate-700"}`}>
-                            {formatDateBR(task.due_date)}
-                          </span>
-                          {promisedDate && (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-300">
-                              <Calendar className="w-3 h-3 text-amber-600 shrink-0" />
-                              Nova Previsão: {formatDateBR(promisedDate)}
-                            </span>
-                          )}
-                        </div>
+                      <td className="py-3 px-4 whitespace-nowrap text-slate-700 font-medium">
+                        {formatDateBR(task.due_date)}
                       </td>
 
                       <td className="py-3 px-4 whitespace-nowrap">

@@ -26,7 +26,6 @@ import {
   isOverdue,
   calculateDaysOverdue,
   extractCleanNotes,
-  extractPromisedDate,
   PROJECT_STATUS_CONFIG,
   PRIORITY_CONFIG,
   TASK_STATUS_CONFIG,
@@ -303,7 +302,6 @@ export default function ProjectDetailsPage() {
                   const status = TASK_STATUS_CONFIG[task.status];
                   const overdue = isOverdue(task.due_date, task.status);
                   const cleanNotes = extractCleanNotes(task.notes);
-                  const promisedDate = task.promised_date || extractPromisedDate(task.notes);
                   const daysLate = calculateDaysOverdue(task.due_date);
 
                   return (
@@ -344,17 +342,10 @@ export default function ProjectDetailsPage() {
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-1.5 text-xs text-slate-700">
                             <span className="text-[11px] text-slate-400">Prazo:</span>
-                            <span className={`font-semibold ${promisedDate && overdue ? "line-through text-slate-400" : "text-slate-800"}`}>
+                            <span className="font-semibold text-slate-800">
                               {formatDateBR(task.due_date)}
                             </span>
                           </div>
-
-                          {promisedDate && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-300">
-                              <Calendar className="w-3 h-3 text-amber-600 shrink-0" />
-                              Nova Previsão: {formatDateBR(promisedDate)}
-                            </span>
-                          )}
 
                           {overdue && task.status !== "concluida" && (
                             <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-red-600">
